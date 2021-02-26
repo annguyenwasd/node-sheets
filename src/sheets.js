@@ -183,6 +183,7 @@ export default class Sheets {
  * Converter from google sheet format to node-sheets format
  */
 function sheetToTable(sheet) {
+
   if (sheet.data.length === 0 || sheet.data[0].rowData === undefined) {
     return {
       title: sheet.properties.title,
@@ -191,12 +192,12 @@ function sheetToTable(sheet) {
       rows: [],
     };
   }
+
   const gridData = sheet.data[0]; // first (unique) range
   const headers = gridData.rowData[0].values // first row (headers)
     .map((col) => formattedValue(col));
 
   const otherRows = gridData.rowData.slice(1);
-
   const values =
     otherRows.length > 0
       ? otherRows[0].values
@@ -209,10 +210,13 @@ function sheetToTable(sheet) {
     rows: otherRows.map((row) =>
       zipObject(
         headers,
-        (row.values || []).map((value) => ({
-          value: effectiveValue(value),
-          stringValue: formattedValue(value),
-        }))
+        (row.values || []).map((value) => {
+          return {
+            value: effectiveValue(value),
+            stringValue: formattedValue(value),
+            textFormatRuns: value.textFormatRuns
+          };
+        })
       )
     ),
   };
@@ -298,7 +302,7 @@ async function getRanges(
   auth,
   spreadsheetId,
   ranges,
-  fields = 'properties.title,sheets.properties,sheets.data(rowData.values.effectiveValue,rowData.values.formattedValue,rowData.values.effectiveFormat.numberFormat)'
+  fields = 'properties.title,sheets.properties,sheets.data(rowData.values.effectiveValue,rowData.values.formattedValue,rowData.values.effectiveFormat.numberFormat,rowData.values.textFormatRuns)'
 ) {
   var sheets = google.sheets('v4');
   const response = await Q.ninvoke(sheets.spreadsheets, 'get', {
